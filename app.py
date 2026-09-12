@@ -2,7 +2,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
 import time
-import ray
+
 
 # ---> 1. FIX THE NAME ERROR (Crucial Imports) <---
 from interactive import InteractiveMarketModel, HumanFirm
@@ -15,13 +15,7 @@ st.title("Human vs AI: Live Strategy Simulation")
 # ---> 2. FIX THE RAY MELTDOWN (Micro-Server Optimization) <---
 # We explicitly disable the Ray dashboard to save hundreds of megabytes of RAM,
 # preventing the "Failed to connect to GCS" timeout on Streamlit Cloud.
-if not ray.is_initialized():
-    ray.init(
-        num_cpus=1, 
-        include_dashboard=False, 
-        ignore_reinit_error=True, 
-        log_to_driver=False
-    )
+
 
 # --- ROBUST INITIALIZATION ---
 if 'model' not in st.session_state:
