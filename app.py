@@ -1,6 +1,7 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
+import time
 from interactive import InteractiveMarketModel, HumanFirm
 from agent import FirmAgent
 
@@ -29,9 +30,21 @@ st.session_state.model.human_target_inn = inn_val
 st.session_state.model.human_target_diff = diff_val
 
 # --- 4. ADVANCE SIMULATION ---
-if st.button("Advance Market 1 Quarter (Step)"):
+col_btn, col_auto = st.columns([1, 2])
+with col_btn:
+    step_pressed = st.button("Advance 1 Quarter")
+with col_auto:
+    # Add a checkbox to toggle the live continuous loop
+    auto_run = st.checkbox("Auto-Run (Live Market Mode)")
+
+# Trigger the step if the button is clicked OR if auto-run is checked
+if step_pressed or auto_run:
     with st.spinner("Processing 2,000 parallel consumer decisions..."):
         st.session_state.model.step()
+        
+    if auto_run:
+        time.sleep(0.5)  # Give the cloud server half a second to breathe
+        st.rerun()       # Force Streamlit to immediately loop and run again
 
 # --- 5. SAFE DATA EXTRACTION & PLOTTING ---
 ai_df = st.session_state.model.datacollector.get_agenttype_vars_dataframe(FirmAgent)
