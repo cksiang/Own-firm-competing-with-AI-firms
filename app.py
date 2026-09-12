@@ -3,26 +3,19 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import time
 
-
-# ---> 1. FIX THE NAME ERROR (Crucial Imports) <---
 from interactive import InteractiveMarketModel, HumanFirm
 from agent import FirmAgent
 
-# --- PAGE SETUP ---
+# --- 1. PAGE SETUP ---
 st.set_page_config(page_title="AI Market Simulator", layout="wide")
 st.title("Human vs AI: Live Strategy Simulation")
 
-# ---> 2. FIX THE RAY MELTDOWN (Micro-Server Optimization) <---
-# We explicitly disable the Ray dashboard to save hundreds of megabytes of RAM,
-# preventing the "Failed to connect to GCS" timeout on Streamlit Cloud.
-
-
-# --- ROBUST INITIALIZATION ---
+# --- 2. ROBUST INITIALIZATION ---
 if 'model' not in st.session_state:
     st.session_state.model = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
     st.session_state.model.step() 
 
-# --- DASHBOARD UI (SIDEBAR) ---
+# --- 3. DASHBOARD UI (SIDEBAR) ---
 st.sidebar.header("My Company Strategy")
 price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
 ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
@@ -35,7 +28,7 @@ st.session_state.model.human_target_ads = ads_val
 st.session_state.model.human_target_inn = inn_val
 st.session_state.model.human_target_diff = diff_val
 
-# --- ADVANCE SIMULATION ---
+# --- 4. ADVANCE SIMULATION ---
 col_btn, col_auto = st.columns([1, 2])
 with col_btn:
     step_pressed = st.button("Advance 1 Quarter")
@@ -45,28 +38,21 @@ with col_auto:
 if step_pressed or auto_run:
     with st.spinner("Processing parallel consumer decisions..."):
         st.session_state.model.step()
-        
-    if auto_run:
-        time.sleep(0.5)
-        st.rerun()
 
-# --- SAFE DATA EXTRACTION & PLOTTING ---
+# --- 5. SAFE DATA EXTRACTION & PLOTTING ---
 ai_df = st.session_state.model.datacollector.get_agenttype_vars_dataframe(FirmAgent)
 human_df = st.session_state.model.datacollector.get_agenttype_vars_dataframe(HumanFirm)
 firm_df = pd.concat([ai_df, human_df])
 
-# Bulletproof check: Only attempt to plot if we successfully extracted data
 if not firm_df.empty:
     df_reset = firm_df.reset_index()
     
-    # Process Data with safeguards against NaN and duplicates
     sales_data = df_reset.pivot_table(index='Step', columns='Strategy', values='Sales', aggfunc='sum').fillna(0)
     market_share = sales_data.div(sales_data.sum(axis=1), axis=0) * 100
     market_share = market_share.fillna(0)
     
     profit_data = df_reset.pivot_table(index='Step', columns='Strategy', values='Profit', aggfunc='sum').fillna(0)
     
-    # Final safety check before handing to Matplotlib
     if not market_share.empty and not market_share.columns.empty:
         col1, col2 = st.columns(2)
         
@@ -84,3 +70,9 @@ if not firm_df.empty:
             ax_profit.set_ylabel("Total Profit ($)")
             ax_profit.legend(title="Firms", loc='upper left', fontsize='small')
             st.pyplot(fig_profit)
+
+# --- 6. AUTO-RUN LOOP TRIGGER ---
+# This must be at the very bottom so the graphs draw BEFORE it loops!
+if auto_run:
+    time.sleep(0.5) 
+    st.rerun()
