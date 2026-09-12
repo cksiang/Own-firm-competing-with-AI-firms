@@ -60,7 +60,6 @@ class InteractiveMarketModel(mesa.Model):
         )
 
     def step(self):
-        # Gather all firm states, passing the new strategy variables
         firm_states = [{
             'id': a.unique_id, 'price': a.price, 'strategy': a.strategy, 
             'ad_spend': getattr(a, 'ad_spend', 0.0),
@@ -68,12 +67,10 @@ class InteractiveMarketModel(mesa.Model):
             'differentiation_cost': getattr(a, 'differentiation_cost', 0.0)
         } for a in self.agents]
         
-        chunk_size = max(1, len(self.consumers) // 4) 
-        chunks = [self.consumers[i:i + chunk_size] for i in range(0, len(self.consumers), chunk_size)]
-        futures = [batch_consumer_choice.remote(chunk, firm_states) for chunk in chunks]
-        results = ray.get(futures) 
+        # Standard Python execution instead of Ray
+        all_choices = batch_consumer_choice(self.consumers, firm_states)
         
-        all_choices = [choice for chunk in results for choice in chunk]
+        from collections import Counter
         sales_counts = Counter([firm_id for cons_id, firm_id in all_choices])
         
         for a in self.agents:
