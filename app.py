@@ -30,7 +30,9 @@ if st.button("Advance Market 1 Quarter (Step)"):
     st.session_state.model.step()
 
 # 5. Extract Data and Draw Matplotlib Graphs
-firm_df = st.session_state.model.datacollector.get_agenttype_vars_dataframe([FirmAgent, HumanFirm])
+ai_df = st.session_state.model.datacollector.get_agenttype_vars_dataframe(FirmAgent)
+human_df = st.session_state.model.datacollector.get_agenttype_vars_dataframe(HumanFirm)
+firm_df = pd.concat([ai_df, human_df])
 
 if not firm_df.empty:
     df_reset = firm_df.reset_index()
