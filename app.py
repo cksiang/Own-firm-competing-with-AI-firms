@@ -38,6 +38,7 @@ if not firm_df.empty:
     df_reset = firm_df.reset_index()
     market_share = df_reset.pivot_table(index='Step', columns='Strategy', values='Sales', aggfunc='sum')
     market_share = market_share.div(market_share.sum(axis=1), axis=0) * 100
+    market_share = market_share.fillna(0)  # <-- This line prevents the crash
     
     fig, ax = plt.subplots(figsize=(10, 5))
     market_share.plot(ax=ax, kind='area', alpha=0.7)
