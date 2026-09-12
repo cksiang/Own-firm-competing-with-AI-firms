@@ -36,7 +36,7 @@ firm_df = pd.concat([ai_df, human_df])
 
 if not firm_df.empty:
     df_reset = firm_df.reset_index()
-    market_share = df_reset.pivot(index='Step', columns='Strategy', values='Sales')
+    market_share = df_reset.pivot_table(index='Step', columns='Strategy', values='Sales', aggfunc='sum')
     market_share = market_share.div(market_share.sum(axis=1), axis=0) * 100
     
     fig, ax = plt.subplots(figsize=(10, 5))
