@@ -4,24 +4,31 @@ import pandas as pd
 import time
 import ray
 
-# These were the missing imports!
+# ---> 1. FIX THE NAME ERROR (Crucial Imports) <---
 from interactive import InteractiveMarketModel, HumanFirm
 from agent import FirmAgent
 
-# --- 1. PAGE SETUP & CLOUD CONSTRAINTS ---
+# --- PAGE SETUP ---
 st.set_page_config(page_title="AI Market Simulator", layout="wide")
 st.title("Human vs AI: Live Strategy Simulation")
 
-# Force Ray to play nicely with Streamlit Cloud's 1GB RAM limit
+# ---> 2. FIX THE RAY MELTDOWN (Micro-Server Optimization) <---
+# We explicitly disable the Ray dashboard to save hundreds of megabytes of RAM,
+# preventing the "Failed to connect to GCS" timeout on Streamlit Cloud.
 if not ray.is_initialized():
-    ray.init(num_cpus=1, log_to_driver=False, ignore_reinit_error=True)
+    ray.init(
+        num_cpus=1, 
+        include_dashboard=False, 
+        ignore_reinit_error=True, 
+        log_to_driver=False
+    )
 
-# --- 2. ROBUST INITIALIZATION ---
+# --- ROBUST INITIALIZATION ---
 if 'model' not in st.session_state:
     st.session_state.model = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
     st.session_state.model.step() 
 
-# --- 3. DASHBOARD UI (SIDEBAR) ---
+# --- DASHBOARD UI (SIDEBAR) ---
 st.sidebar.header("My Company Strategy")
 price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
 ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
@@ -34,7 +41,7 @@ st.session_state.model.human_target_ads = ads_val
 st.session_state.model.human_target_inn = inn_val
 st.session_state.model.human_target_diff = diff_val
 
-# --- 4. ADVANCE SIMULATION ---
+# --- ADVANCE SIMULATION ---
 col_btn, col_auto = st.columns([1, 2])
 with col_btn:
     step_pressed = st.button("Advance 1 Quarter")
@@ -42,14 +49,14 @@ with col_auto:
     auto_run = st.checkbox("Auto-Run (Live Market Mode)")
 
 if step_pressed or auto_run:
-    with st.spinner("Processing 2,000 parallel consumer decisions..."):
+    with st.spinner("Processing parallel consumer decisions..."):
         st.session_state.model.step()
         
     if auto_run:
-        time.sleep(0.5)  # Give the cloud server half a second to breathe
-        st.rerun()       # Force Streamlit to immediately loop and run again
+        time.sleep(0.5)
+        st.rerun()
 
-# --- 5. SAFE DATA EXTRACTION & PLOTTING ---
+# --- SAFE DATA EXTRACTION & PLOTTING ---
 ai_df = st.session_state.model.datacollector.get_agenttype_vars_dataframe(FirmAgent)
 human_df = st.session_state.model.datacollector.get_agenttype_vars_dataframe(HumanFirm)
 firm_df = pd.concat([ai_df, human_df])
@@ -67,7 +74,7 @@ if not firm_df.empty:
     
     # Final safety check before handing to Matplotlib
     if not market_share.empty and not market_share.columns.empty:
-        col1, col2 = st.columns(2) # Display graphs side-by-side
+        col1, col2 = st.columns(2)
         
         with col1:
             fig_share, ax_share = plt.subplots(figsize=(8, 5))
