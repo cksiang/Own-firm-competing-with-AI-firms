@@ -4,3 +4,4 @@ mesa
 matplotlib
 pandas
 numpy
+networkx
