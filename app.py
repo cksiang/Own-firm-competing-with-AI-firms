@@ -2,19 +2,21 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
 import time
-from interactive import InteractiveMarketModel, HumanFirm
-from agent import FirmAgent
+import ray  # <-- Import ray here
 
-# --- 1. PAGE SETUP ---
+# --- 1. PAGE SETUP & CLOUD CONSTRAINTS ---
 st.set_page_config(page_title="AI Market Simulator", layout="wide")
 st.title("Human vs AI: Live Strategy Simulation")
 
+# Force Ray to play nicely with Streamlit Cloud's 1GB RAM limit
+# This prevents the "Failed to connect to GCS" timeouts
+if not ray.is_initialized():
+    ray.init(num_cpus=1, log_to_driver=False, ignore_reinit_error=True)
+
 # --- 2. ROBUST INITIALIZATION ---
-# Initialize the model and force it to take Step 1 immediately so charts never crash on load
 if 'model' not in st.session_state:
-    # Lowered consumers to 2000 to ensure the free cloud server doesn't time out
     st.session_state.model = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
-    st.session_state.model.step() 
+    st.session_state.model.step()
 
 # --- 3. DASHBOARD UI (SIDEBAR) ---
 st.sidebar.header("My Company Strategy")
