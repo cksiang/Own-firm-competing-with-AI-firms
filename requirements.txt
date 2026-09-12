@@ -1,0 +1,6 @@
+streamlit
+ray
+mesa
+matplotlib
+pandas
+numpy
