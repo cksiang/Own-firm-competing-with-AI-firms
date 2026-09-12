@@ -60,24 +60,41 @@ class InteractiveMarketModel(mesa.Model):
         )
 
     def step(self):
+        # 1. Grab active agents (safeguard for different Mesa versions)
+        firm_agents = self.schedule.agents if hasattr(self, 'schedule') else self.agents
+        
         firm_states = [{
             'id': a.unique_id, 'price': a.price, 'strategy': a.strategy, 
             'ad_spend': getattr(a, 'ad_spend', 0.0),
             'innovation_spend': getattr(a, 'innovation_spend', 0.0),
             'differentiation_cost': getattr(a, 'differentiation_cost', 0.0)
-        } for a in self.agents]
+        } for a in firm_agents]
         
-        # Standard Python execution instead of Ray
+        # 2. Standard Python Execution
         all_choices = batch_consumer_choice(self.consumers, firm_states)
         
         from collections import Counter
         sales_counts = Counter([firm_id for cons_id, firm_id in all_choices])
         
-        for a in self.agents:
+        # 3. Calculate Sales, Revenue, and Profit
+        for a in firm_agents:
             a.sales = sales_counts.get(a.unique_id, 0)
             a.revenue = a.sales * a.price
+            
+            # Explicitly calculate profit so the right-side graph populates
+            base_cost = 20.0 
+            diff_cost = getattr(a, 'differentiation_cost', 0.0)
+            fixed_costs = getattr(a, 'ad_spend', 0.0) + getattr(a, 'innovation_spend', 0.0)
+            a.profit = a.revenue - (a.sales * (base_cost + diff_cost)) - fixed_costs
                 
-        self.agents.shuffle_do("step")
+        # 4. Advance the Simulation Clock (Crucial for graphs!)
+        if hasattr(self, 'schedule'):
+            self.schedule.step() # Moves Step 1 -> 2 -> 3
+        else:
+            self.agents.shuffle_do("step")
+            self.steps += 1      # Moves Step 1 -> 2 -> 3
+            
+        # 5. Collect the new step data
         self.datacollector.collect(self)
 
 
