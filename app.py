@@ -78,6 +78,46 @@ if st.session_state.company_cash <= 0:
 # ----------------- NEW SCOREBOARD CODE -----------------
 st.subheader("Live Market Scoreboard (Current Quarter)")
 
+# ----------------- CONSUMER ELASTICITY METRICS -----------------
+st.subheader("📊 Market Intelligence: Consumer Price Elasticity")
+
+consumers = getattr(st.session_state.sim_v3, 'consumers', [])
+if consumers:
+    total_cons = len(consumers)
+    
+    # Safe extraction whether consumers are stored as dicts or objects
+    def extract_sens(c):
+        return c.get('price_sensitivity', 1.0) if isinstance(c, dict) else getattr(c, 'price_sensitivity', 1.0)
+    
+    # Segment consumers across the [0.5, 1.5] sensitivity range
+    low_sens = sum(1 for c in consumers if extract_sens(c) < 0.83)
+    med_sens = sum(1 for c in consumers if 0.83 <= extract_sens(c) <= 1.17)
+    high_sens = sum(1 for c in consumers if extract_sens(c) > 1.17)
+    
+    m1, m2, m3 = st.columns(3)
+    with m1:
+        st.metric(
+            label="Inelastic (Brand Loyal / Quality Focused)",
+            value=f"{low_sens:,}",
+            delta=f"{(low_sens/total_cons)*100:.1f}% of market",
+            delta_color="off"
+        )
+    with m2:
+        st.metric(
+            label="Moderate Elasticity (Balanced Buyers)",
+            value=f"{med_sens:,}",
+            delta=f"{(med_sens/total_cons)*100:.1f}% of market",
+            delta_color="off"
+        )
+    with m3:
+        st.metric(
+            label="High Elasticity (Bargain Hunters)",
+            value=f"{high_sens:,}",
+            delta=f"{(high_sens/total_cons)*100:.1f}% of market",
+            delta_color="off"
+        )
+# ---------------------------------------------------------------
+
 # Safely extract all agents, bypassing the server cache limitations
 active_agents = st.session_state.sim_v3.schedule.agents if hasattr(st.session_state.sim_v3, 'schedule') and st.session_state.sim_v3.schedule else st.session_state.sim_v3.agents
 
