@@ -50,8 +50,11 @@ if step_pressed or auto_run:
         # 1. Advance the market simulation
         st.session_state.sim_v3.step()
         
-        # 2. ABSOLUTE BYPASS: Calculate every dollar natively on the frontend
-        # We grab your actual sales volume, but do the financial math ourselves
+        # 2. OVERWRITE BACKEND RESET: Force live slider values post-step
+        human_firm.price = price_val
+        human_firm.differentiation_cost = diff_val
+        
+        # 3. ABSOLUTE BYPASS: Calculate every dollar natively on the frontend
         actual_sales = getattr(human_firm, 'sales', 0)
         
         revenue = actual_sales * price_val
@@ -60,7 +63,7 @@ if step_pressed or auto_run:
         
         true_profit = revenue - unit_costs - fixed_costs
         
-        # 3. Apply the real math to your bank account
+        # 4. Apply real math to bank account
         st.session_state.company_cash += true_profit
 
 with col_cash:
