@@ -19,10 +19,7 @@ if 'model' not in st.session_state:
 # --- 3. DASHBOARD UI (SIDEBAR) ---
 st.sidebar.header("My Company Strategy")
 
-# Safely extract active agents
-active_agents = st.session_state.model.schedule.agents if hasattr(st.session_state.model, 'schedule') and st.session_state.model.schedule else st.session_state.model.agents
-human_firm = [a for a in active_agents if getattr(a, 'strategy', '') == "My Company (Human)"][0]
-
+human_firm = st.session_state.model.human_firm
 price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
 ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
 inn_val = st.sidebar.slider("Innovation R&D ($/turn)", 0.0, 5000.0, 0.0, 100.0)
