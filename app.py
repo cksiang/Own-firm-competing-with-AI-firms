@@ -66,6 +66,36 @@ if st.session_state.company_cash <= 0:
     st.error("🚨 BANKRUPT! You burned through your cash reserves. Please click 'Reboot app' in the top right menu to restart.")
     st.stop()
 # --- 5. SAFE DATA EXTRACTION & PLOTTING ---
+
+# ----------------- NEW SCOREBOARD CODE -----------------
+st.subheader("Live Market Scoreboard (Current Quarter)")
+
+# Calculate total market size this turn to find percentages
+total_sales = sum([getattr(a, 'sales', 0) for a in st.session_state.sim_v3.firm_agents])
+
+scoreboard_data = []
+for a in st.session_state.sim_v3.firm_agents:
+    sales = getattr(a, 'sales', 0)
+    share = (sales / total_sales * 100) if total_sales > 0 else 0
+    
+    # Calculate base cost + quality cost
+    unit_cost = 20.0 + getattr(a, 'differentiation_cost', 0.0)
+    
+    scoreboard_data.append({
+        "Firm": a.strategy,
+        "Price": f"${a.price:.2f}",
+        "Unit Cost": f"${unit_cost:.2f}",
+        "Units Sold": f"{sales:,}",
+        "Market Share": f"{share:.1f}%"
+    })
+
+# Display as a clean, static table
+st.table(pd.DataFrame(scoreboard_data).set_index("Firm"))
+# -------------------------------------------------------
+
+# (Keep your existing graphing code below this!)
+ai_df = st.session_state.sim_v3.datacollector.get_agenttype_vars_dataframe(FirmAgent)
+# ...
 ai_df = st.session_state.sim_v3.datacollector.get_agenttype_vars_dataframe(FirmAgent)
 human_df = st.session_state.sim_v3.datacollector.get_agenttype_vars_dataframe(HumanFirm)
 firm_df = pd.concat([ai_df, human_df])
