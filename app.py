@@ -11,15 +11,35 @@ st.set_page_config(page_title="AI Market Simulator", layout="wide")
 st.title("Human vs AI: Live Strategy Simulation")
 
 # --- 2. ROBUST INITIALIZATION ---
-if 'model' not in st.session_state:
+# Force a hard reset if the model in memory is an old version without the 'cash' attribute
+def initialize_model():
     st.session_state.model = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
-    st.session_state.model.step() 
+    st.session_state.model.step()
+
+if 'model' not in st.session_state:
+    initialize_model()
+else:
+    # Check if the human firm has the new cash attribute. If not, wipe the old memory.
+    test_firm = [a for a in st.session_state.model.agents if getattr(a, 'strategy', '') == "My Company (Human)"][0]
+    if not hasattr(test_firm, 'cash'):
+        initialize_model()
 
 # --- 3. DASHBOARD UI (SIDEBAR) ---
 st.sidebar.header("My Company Strategy")
 
-# Extract the human agent to read the bank account
+# Extract the human agent DIRECTLY so we can read its cash and feed it slider data
 human_firm = [a for a in st.session_state.model.agents if getattr(a, 'strategy', '') == "My Company (Human)"][0]
+
+price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
+ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
+inn_val = st.sidebar.slider("Innovation R&D ($/turn)", 0.0, 5000.0, 0.0, 100.0)
+diff_val = st.sidebar.slider("Quality (+$ Cost/Unit)", 0.0, 30.0, 0.0, 1.0)
+
+# WIRE SLIDERS DIRECTLY TO THE HUMAN FIRM
+human_firm.target_price = price_val
+human_firm.target_ads = ads_val
+human_firm.target_inn = inn_val
+human_firm.target_diff = diff_val
 
 # Safely check for new variables so old session states don't crash the app
 is_bankrupt = getattr(human_firm, 'is_bankrupt', False)
@@ -27,22 +47,10 @@ current_cash = getattr(human_firm, 'cash', 100000.0)
 
 if is_bankrupt:
     st.sidebar.error("🚨 BANKRUPT! Your firm ran out of cash.")
-    st.error("Game Over. You burned through your cash reserves. Please click 'Reboot App' to start a new company.")
+    st.error("Game Over. You burned through your cash reserves. Please refresh the web page to start a new company.")
     st.stop() 
 
 st.sidebar.metric("Company Bank Account", f"${current_cash:,.2f}")
-
-# ... (Keep your existing sliders below this) ...
-price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
-ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
-inn_val = st.sidebar.slider("Innovation R&D ($/turn)", 0.0, 5000.0, 0.0, 100.0)
-diff_val = st.sidebar.slider("Quality (+$ Cost/Unit)", 0.0, 30.0, 0.0, 1.0)
-
-# Apply sliders to the model
-st.session_state.model.human_target_price = price_val
-st.session_state.model.human_target_ads = ads_val
-st.session_state.model.human_target_inn = inn_val
-st.session_state.model.human_target_diff = diff_val
 
 # --- 4. ADVANCE SIMULATION ---
 col_btn, col_auto = st.columns([1, 2])
