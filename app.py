@@ -17,6 +17,18 @@ if 'model' not in st.session_state:
 
 # --- 3. DASHBOARD UI (SIDEBAR) ---
 st.sidebar.header("My Company Strategy")
+
+# Extract the human agent to read the bank account
+human_firm = [a for a in st.session_state.model.agents if getattr(a, 'strategy', '') == "My Company (Human)"][0]
+
+if human_firm.is_bankrupt:
+    st.sidebar.error("🚨 BANKRUPT! Your firm ran out of cash.")
+    st.error("Game Over. You burned through your cash reserves. Please refresh the web page to start a new company.")
+    st.stop() # This instantly halts the app so they can't cheat and keep clicking advance
+
+st.sidebar.metric("Company Bank Account", f"${human_firm.cash:,.2f}")
+
+# ... (Keep your existing sliders below this) ...
 price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
 ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
 inn_val = st.sidebar.slider("Innovation R&D ($/turn)", 0.0, 5000.0, 0.0, 100.0)
