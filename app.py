@@ -27,7 +27,7 @@ else:
 # --- 3. DASHBOARD UI (SIDEBAR) ---
 st.sidebar.header("My Company Strategy")
 
-# Extract the human agent DIRECTLY so we can read its cash and feed it slider data
+# Extract the human agent DIRECTLY so we can feed it slider data
 human_firm = [a for a in st.session_state.model.agents if getattr(a, 'strategy', '') == "My Company (Human)"][0]
 
 price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
@@ -35,33 +35,39 @@ ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
 inn_val = st.sidebar.slider("Innovation R&D ($/turn)", 0.0, 5000.0, 0.0, 100.0)
 diff_val = st.sidebar.slider("Quality (+$ Cost/Unit)", 0.0, 30.0, 0.0, 1.0)
 
-# WIRE SLIDERS DIRECTLY TO THE HUMAN FIRM
+# Wire sliders directly to the human firm
 human_firm.target_price = price_val
 human_firm.target_ads = ads_val
 human_firm.target_inn = inn_val
 human_firm.target_diff = diff_val
 
-# Safely check for new variables so old session states don't crash the app
-is_bankrupt = getattr(human_firm, 'is_bankrupt', False)
-current_cash = getattr(human_firm, 'cash', 100000.0)
+# --- 4. ADVANCE SIMULATION & BANK UI ---
+# We create 3 columns on the main screen to hold the button, auto-run, and bank balance
+col_btn, col_auto, col_cash = st.columns([1, 1, 1])
 
-if is_bankrupt:
-    st.sidebar.error("🚨 BANKRUPT! Your firm ran out of cash.")
-    st.error("Game Over. You burned through your cash reserves. Please refresh the web page to start a new company.")
-    st.stop() 
-
-st.sidebar.metric("Company Bank Account", f"${current_cash:,.2f}")
-
-# --- 4. ADVANCE SIMULATION ---
-col_btn, col_auto = st.columns([1, 2])
 with col_btn:
     step_pressed = st.button("Advance 1 Quarter")
 with col_auto:
     auto_run = st.checkbox("Auto-Run (Live Market Mode)")
 
+# Calculate the math FIRST
 if step_pressed or auto_run:
-    with st.spinner("Processing parallel consumer decisions..."):
+    with st.spinner("Processing 2,000 parallel consumer decisions..."):
         st.session_state.model.step()
+
+# Read the cash AFTER the math finishes to prevent UI lag
+human_firm = [a for a in st.session_state.model.agents if getattr(a, 'strategy', '') == "My Company (Human)"][0]
+is_bankrupt = getattr(human_firm, 'is_bankrupt', False)
+current_cash = getattr(human_firm, 'cash', 100000.0)
+
+# Display the cash on the main screen
+with col_cash:
+    st.metric("🏦 Company Bank Account", f"${current_cash:,.2f}")
+
+# Bankruptcy Lockout
+if is_bankrupt:
+    st.error("🚨 BANKRUPT! Game Over. You burned through your cash reserves. Please click 'Reboot app' in the top right menu to start over.")
+    st.stop() # Halts the graphs and prevents further turns
 
 # --- 5. SAFE DATA EXTRACTION & PLOTTING ---
 ai_df = st.session_state.model.datacollector.get_agenttype_vars_dataframe(FirmAgent)
