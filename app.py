@@ -65,16 +65,20 @@ with col_cash:
 if st.session_state.company_cash <= 0:
     st.error("🚨 BANKRUPT! You burned through your cash reserves. Please click 'Reboot app' in the top right menu to restart.")
     st.stop()
+
 # --- 5. SAFE DATA EXTRACTION & PLOTTING ---
 
 # ----------------- NEW SCOREBOARD CODE -----------------
 st.subheader("Live Market Scoreboard (Current Quarter)")
 
+# Safely extract all agents, bypassing the server cache limitations
+active_agents = st.session_state.sim_v3.schedule.agents if hasattr(st.session_state.sim_v3, 'schedule') and st.session_state.sim_v3.schedule else st.session_state.sim_v3.agents
+
 # Calculate total market size this turn to find percentages
-total_sales = sum([getattr(a, 'sales', 0) for a in st.session_state.sim_v3.firm_agents])
+total_sales = sum([getattr(a, 'sales', 0) for a in active_agents])
 
 scoreboard_data = []
-for a in st.session_state.sim_v3.firm_agents:
+for a in active_agents:
     sales = getattr(a, 'sales', 0)
     share = (sales / total_sales * 100) if total_sales > 0 else 0
     
@@ -82,8 +86,8 @@ for a in st.session_state.sim_v3.firm_agents:
     unit_cost = 20.0 + getattr(a, 'differentiation_cost', 0.0)
     
     scoreboard_data.append({
-        "Firm": a.strategy,
-        "Price": f"${a.price:.2f}",
+        "Firm": getattr(a, 'strategy', 'Unknown Firm'),
+        "Price": f"${getattr(a, 'price', 0.0):.2f}",
         "Unit Cost": f"${unit_cost:.2f}",
         "Units Sold": f"{sales:,}",
         "Market Share": f"{share:.1f}%"
@@ -93,9 +97,7 @@ for a in st.session_state.sim_v3.firm_agents:
 st.table(pd.DataFrame(scoreboard_data).set_index("Firm"))
 # -------------------------------------------------------
 
-# (Keep your existing graphing code below this!)
-ai_df = st.session_state.sim_v3.datacollector.get_agenttype_vars_dataframe(FirmAgent)
-# ...
+# Extract data for the graphs
 ai_df = st.session_state.sim_v3.datacollector.get_agenttype_vars_dataframe(FirmAgent)
 human_df = st.session_state.sim_v3.datacollector.get_agenttype_vars_dataframe(HumanFirm)
 firm_df = pd.concat([ai_df, human_df])
