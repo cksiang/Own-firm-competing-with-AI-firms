@@ -46,8 +46,10 @@ if step_pressed or auto_run:
         # 1. Advance the market simulation
         st.session_state.sim_v3.step()
         
-        # 2. Add the quarter's net profit/loss directly to the native bank account
-        st.session_state.company_cash += human_firm.profit
+        # 2. THE BYPASS: Calculate true profit natively to defeat the server cache
+        # We manually subtract your Ad and R&D slider values from whatever the backend reports
+        true_profit = human_firm.profit - (ads_val + inn_val)
+        st.session_state.company_cash += true_profit
 
 with col_cash:
     st.metric("🏦 Company Bank Account", f"${st.session_state.company_cash:,.2f}")
