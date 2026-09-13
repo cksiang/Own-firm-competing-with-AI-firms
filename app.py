@@ -10,17 +10,17 @@ from agent import FirmAgent
 st.set_page_config(page_title="AI Market Simulator", layout="wide")
 st.title("Human vs AI: Live Strategy Simulation")
 
-# --- 2. THE SILVER BULLET: FORCED MEMORY WIPE ---
-# Changing this key forces Streamlit to delete the ghost save state and boot the new code!
-if 'sim_v2' not in st.session_state:
-    st.session_state.sim_v2 = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
-    st.session_state.sim_v2.step()
+# --- 2. NATIVE STATE INITIALIZATION ---
+# We bypass the backend cache by storing the cash directly in Streamlit's native memory
+if 'sim_v3' not in st.session_state:
+    st.session_state.sim_v3 = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
+    st.session_state.sim_v3.step()
+    st.session_state.company_cash = 100000.0  # The native bank account
 
 # --- 3. DASHBOARD UI (SIDEBAR) ---
 st.sidebar.header("My Company Strategy")
 
-# Extract the hardwired firm from the new v2 model
-human_firm = st.session_state.sim_v2.human_firm
+human_firm = st.session_state.sim_v3.human_firm
 
 price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
 ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
@@ -43,22 +43,22 @@ with col_auto:
 
 if step_pressed or auto_run:
     with st.spinner("Processing market quarter..."):
-        st.session_state.sim_v2.step()
-
-# Read the cash AFTER math
-is_bankrupt = getattr(human_firm, 'is_bankrupt', False)
-current_cash = getattr(human_firm, 'cash', 100000.0)
+        # 1. Advance the market simulation
+        st.session_state.sim_v3.step()
+        
+        # 2. Add the quarter's net profit/loss directly to the native bank account
+        st.session_state.company_cash += human_firm.profit
 
 with col_cash:
-    st.metric("🏦 Company Bank Account", f"${current_cash:,.2f}")
+    st.metric("🏦 Company Bank Account", f"${st.session_state.company_cash:,.2f}")
 
-if is_bankrupt:
-    st.error("🚨 BANKRUPT! You burned through your cash reserves.")
+if st.session_state.company_cash <= 0:
+    st.error("🚨 BANKRUPT! You burned through your cash reserves. Please click 'Reboot app' in the top right menu to restart.")
     st.stop()
 
 # --- 5. SAFE DATA EXTRACTION & PLOTTING ---
-ai_df = st.session_state.sim_v2.datacollector.get_agenttype_vars_dataframe(FirmAgent)
-human_df = st.session_state.sim_v2.datacollector.get_agenttype_vars_dataframe(HumanFirm)
+ai_df = st.session_state.sim_v3.datacollector.get_agenttype_vars_dataframe(FirmAgent)
+human_df = st.session_state.sim_v3.datacollector.get_agenttype_vars_dataframe(HumanFirm)
 firm_df = pd.concat([ai_df, human_df])
 
 if not firm_df.empty:
