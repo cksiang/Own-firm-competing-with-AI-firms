@@ -46,9 +46,17 @@ if step_pressed or auto_run:
         # 1. Advance the market simulation
         st.session_state.sim_v3.step()
         
-        # 2. THE BYPASS: Calculate true profit natively to defeat the server cache
-        # We manually subtract your Ad and R&D slider values from whatever the backend reports
-        true_profit = human_firm.profit - (ads_val + inn_val)
+        # 2. ABSOLUTE BYPASS: Calculate every dollar natively on the frontend
+        # We grab your actual sales volume, but do the financial math ourselves
+        actual_sales = getattr(human_firm, 'sales', 0)
+        
+        revenue = actual_sales * price_val
+        unit_costs = actual_sales * (20.0 + diff_val) # $20 base cost + Quality slider
+        fixed_costs = ads_val + inn_val
+        
+        true_profit = revenue - unit_costs - fixed_costs
+        
+        # 3. Apply the real math to your bank account
         st.session_state.company_cash += true_profit
 
 with col_cash:
@@ -57,7 +65,6 @@ with col_cash:
 if st.session_state.company_cash <= 0:
     st.error("🚨 BANKRUPT! You burned through your cash reserves. Please click 'Reboot app' in the top right menu to restart.")
     st.stop()
-
 # --- 5. SAFE DATA EXTRACTION & PLOTTING ---
 ai_df = st.session_state.sim_v3.datacollector.get_agenttype_vars_dataframe(FirmAgent)
 human_df = st.session_state.sim_v3.datacollector.get_agenttype_vars_dataframe(HumanFirm)
