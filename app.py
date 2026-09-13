@@ -27,11 +27,15 @@ ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
 inn_val = st.sidebar.slider("Innovation R&D ($/turn)", 0.0, 5000.0, 0.0, 100.0)
 diff_val = st.sidebar.slider("Quality (+$ Cost/Unit)", 0.0, 30.0, 0.0, 1.0)
 
-# Wire sliders
+# Wire sliders (Hardwired directly to bypass the server cache)
+human_firm.price = price_val
 human_firm.target_price = price_val
+
+human_firm.differentiation_cost = diff_val
+human_firm.target_diff = diff_val
+
 human_firm.target_ads = ads_val
 human_firm.target_inn = inn_val
-human_firm.target_diff = diff_val
 
 # --- 4. ADVANCE SIMULATION & BANK UI ---
 col_btn, col_auto, col_cash = st.columns([1, 1, 1])
