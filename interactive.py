@@ -54,6 +54,9 @@ class InteractiveMarketModel(mesa.Model):
         super().__init__()
         self.num_consumers = num_consumers
         
+        # ---> EXPLICIT CLOCK TO FIX THE GRAPH FREEZE <---
+        self.steps = 0 
+        
         # Compatibility handling for different Mesa versions
         self.schedule = mesa.time.RandomActivation(self) if hasattr(mesa.time, 'RandomActivation') else None
         
@@ -87,7 +90,10 @@ class InteractiveMarketModel(mesa.Model):
         )
         
     def step(self):
-        firm_agents = self.schedule.agents if hasattr(self, 'schedule') else self.agents
+        # ---> FORCE THE CLOCK TO TICK FORWARD <---
+        self.steps += 1 
+        
+        firm_agents = self.schedule.agents if hasattr(self, 'schedule') and self.schedule else self.agents
         
         firm_states = [{
             'id': a.unique_id, 'price': a.price, 'strategy': a.strategy, 
@@ -123,8 +129,8 @@ class InteractiveMarketModel(mesa.Model):
             if hasattr(a, 'cash'):
                 a.cash += (a.revenue - (a.sales * (base_cost + diff_cost)))
                 
-        # Advance the simulation clock for all agents
-        if hasattr(self, 'schedule'):
+        # Advance the simulation logic for all agents
+        if hasattr(self, 'schedule') and self.schedule:
             self.schedule.step()
         else:
             self.agents.shuffle_do("step")
