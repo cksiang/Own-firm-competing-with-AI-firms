@@ -4,7 +4,7 @@ from matplotlib.widgets import Slider
 import pandas as pd
 import mesa
 from collections import Counter
-import ray
+
 
 from agent import FirmAgent
 from agent_execution import batch_consumer_choice
