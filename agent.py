@@ -35,6 +35,14 @@ class FirmAgent(mesa.Agent):
         self.last_action = 0.0
 
     def step(self):
+
+        # ---> AI PANIC STATE <---
+        # If an AI firm drops below 100 sales (5% market share), it enters survival mode.
+        if hasattr(self, 'sales') and self.sales < 100:
+            self.price = 22.0  # Slash prices drastically to just above base cost
+            self.ad_spend += 500.0  # Dump remaining capital into aggressive marketing
+            # Skip normal Q-learning this turn to execute emergency protocol
+            return
         # 1. Economies of Scale: Selling more units decreases the base manufacturing cost
         # Max discount is 20% off base cost if they capture the whole market
         scale_discount = min(0.20, self.sales / 10000.0)
