@@ -121,12 +121,23 @@ if not firm_df.empty:
             ax_profit.legend(title="Firms", loc='upper left', fontsize='small')
             st.pyplot(fig_profit)
 
-# --- 6. CUSTOMER ELASTICITY SEGMENTATION (BELOW GRAPHS) ---
+# --- 6. DUAL CONSUMER ELASTICITY INTELLIGENCE (BELOW GRAPHS) ---
 st.markdown("---")
-st.subheader("🎯 Customer Segment Breakdown (Captured by My Firm)")
+st.subheader("📊 Consumer Elasticity Intelligence")
 
 consumers = getattr(st.session_state.sim_v3, 'consumers', [])
 if consumers:
+    total_cons = len(consumers)
+    
+    def extract_sens(c):
+        return c.get('price_sensitivity', 1.0) if isinstance(c, dict) else getattr(c, 'price_sensitivity', 1.0)
+
+    # 1. Total Market Composition
+    tot_low = sum(1 for c in consumers if extract_sens(c) < 0.83)
+    tot_med = sum(1 for c in consumers if 0.83 <= extract_sens(c) <= 1.17)
+    tot_high = sum(1 for c in consumers if extract_sens(c) > 1.17)
+
+    # 2. Firm Captured Composition
     firm_states = [{
         'id': a.unique_id, 
         'price': getattr(a, 'price', 40.0), 
@@ -140,39 +151,32 @@ if consumers:
         choices = batch_consumer_choice(consumers, firm_states)
         human_id = human_firm.unique_id
         human_buyers = [cons_id for cons_id, firm_id in choices if firm_id == human_id]
-        total_human_buyers = len(human_buyers)
         
-        cons_map = {c['id']: c.get('price_sensitivity', 1.0) if isinstance(c, dict) else getattr(c, 'price_sensitivity', 1.0) for c in consumers}
+        cons_map = {c['id']: extract_sens(c) for c in consumers}
         
-        low_count = sum(1 for cid in human_buyers if cons_map.get(cid, 1.0) < 0.83)
-        med_count = sum(1 for cid in human_buyers if 0.83 <= cons_map.get(cid, 1.0) <= 1.17)
-        high_count = sum(1 for cid in human_buyers if cons_map.get(cid, 1.0) > 1.17)
+        cap_low = sum(1 for cid in human_buyers if cons_map.get(cid, 1.0) < 0.83)
+        cap_med = sum(1 for cid in human_buyers if 0.83 <= cons_map.get(cid, 1.0) <= 1.17)
+        cap_high = sum(1 for cid in human_buyers if cons_map.get(cid, 1.0) > 1.17)
         
-        if total_human_buyers > 0:
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.metric(
-                    "Inelastic Buyers (Quality Loyal)", 
-                    f"{low_count:,}", 
-                    f"{(low_count/total_human_buyers)*100:.1f}% of your buyers",
-                    delta_color="off"
-                )
-            with c2:
-                st.metric(
-                    "Moderate Buyers (Value Seekers)", 
-                    f"{med_count:,}", 
-                    f"{(med_count/total_human_buyers)*100:.1f}% of your buyers",
-                    delta_color="off"
-                )
-            with c3:
-                st.metric(
-                    "High Elasticity (Price Hunters)", 
-                    f"{high_count:,}", 
-                    f"{(high_count/total_human_buyers)*100:.1f}% of your buyers",
-                    delta_color="off"
-                )
-        else:
-            st.info("💡 You currently have 0 sales. Lower your price or boost Marketing/Quality to capture consumer segments.")
+        col_total, col_captured = st.columns(2)
+        
+        with col_total:
+            st.markdown("#### 🌐 Total Market Demand (2,000 Consumers)")
+            tm1, tm2, tm3 = st.columns(3)
+            tm1.metric("Low Elasticity (Brand Loyal)", f"{tot_low:,}", f"{(tot_low/total_cons)*100:.1f}% Market", delta_color="off")
+            tm2.metric("Moderate Elasticity (Balanced)", f"{tot_med:,}", f"{(tot_med/total_cons)*100:.1f}% Market", delta_color="off")
+            tm3.metric("High Elasticity (Price Sensitive)", f"{tot_high:,}", f"{(tot_high/total_cons)*100:.1f}% Market", delta_color="off")
+
+        with col_captured:
+            st.markdown("#### 🎯 Captured by My Firm")
+            if len(human_buyers) > 0:
+                cm1, cm2, cm3 = st.columns(3)
+                cm1.metric("Loyal Captured", f"{cap_low:,}", f"{(cap_low/tot_low)*100:.1f}% of segment", delta_color="off")
+                cm2.metric("Balanced Captured", f"{cap_med:,}", f"{(cap_med/tot_med)*100:.1f}% of segment", delta_color="off")
+                cm3.metric("Price Hunters Captured", f"{cap_high:,}", f"{(cap_high/tot_high)*100:.1f}% of segment", delta_color="off")
+            else:
+                st.info("💡 0 Buyers Captured — Adjust price, quality, or ad spend to penetrate consumer segments.")
+                
     except Exception as e:
         st.caption("Consumer breakdown updating...")
 
