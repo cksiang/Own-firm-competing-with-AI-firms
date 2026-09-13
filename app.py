@@ -21,12 +21,16 @@ st.sidebar.header("My Company Strategy")
 # Extract the human agent to read the bank account
 human_firm = [a for a in st.session_state.model.agents if getattr(a, 'strategy', '') == "My Company (Human)"][0]
 
-if human_firm.is_bankrupt:
-    st.sidebar.error("🚨 BANKRUPT! Your firm ran out of cash.")
-    st.error("Game Over. You burned through your cash reserves. Please refresh the web page to start a new company.")
-    st.stop() # This instantly halts the app so they can't cheat and keep clicking advance
+# Safely check for new variables so old session states don't crash the app
+is_bankrupt = getattr(human_firm, 'is_bankrupt', False)
+current_cash = getattr(human_firm, 'cash', 100000.0)
 
-st.sidebar.metric("Company Bank Account", f"${human_firm.cash:,.2f}")
+if is_bankrupt:
+    st.sidebar.error("🚨 BANKRUPT! Your firm ran out of cash.")
+    st.error("Game Over. You burned through your cash reserves. Please click 'Reboot App' to start a new company.")
+    st.stop() 
+
+st.sidebar.metric("Company Bank Account", f"${current_cash:,.2f}")
 
 # ... (Keep your existing sliders below this) ...
 price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
