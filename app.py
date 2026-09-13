@@ -10,16 +10,18 @@ from agent import FirmAgent
 st.set_page_config(page_title="AI Market Simulator", layout="wide")
 st.title("Human vs AI: Live Strategy Simulation")
 
-# --- 2. CLEAN INITIALIZATION ---
-# We have removed the aggressive reset loop. Once it starts, it keeps going!
-if 'model' not in st.session_state:
-    st.session_state.model = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
-    st.session_state.model.step()
+# --- 2. THE SILVER BULLET: FORCED MEMORY WIPE ---
+# Changing this key forces Streamlit to delete the ghost save state and boot the new code!
+if 'sim_v2' not in st.session_state:
+    st.session_state.sim_v2 = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
+    st.session_state.sim_v2.step()
 
 # --- 3. DASHBOARD UI (SIDEBAR) ---
 st.sidebar.header("My Company Strategy")
 
-human_firm = st.session_state.model.human_firm
+# Extract the hardwired firm from the new v2 model
+human_firm = st.session_state.sim_v2.human_firm
+
 price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
 ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
 inn_val = st.sidebar.slider("Innovation R&D ($/turn)", 0.0, 5000.0, 0.0, 100.0)
@@ -41,7 +43,7 @@ with col_auto:
 
 if step_pressed or auto_run:
     with st.spinner("Processing market quarter..."):
-        st.session_state.model.step()
+        st.session_state.sim_v2.step()
 
 # Read the cash AFTER math
 is_bankrupt = getattr(human_firm, 'is_bankrupt', False)
@@ -51,12 +53,12 @@ with col_cash:
     st.metric("🏦 Company Bank Account", f"${current_cash:,.2f}")
 
 if is_bankrupt:
-    st.error("🚨 BANKRUPT! You burned through your cash reserves. Please click 'Reboot app' in the top right menu.")
+    st.error("🚨 BANKRUPT! You burned through your cash reserves.")
     st.stop()
 
 # --- 5. SAFE DATA EXTRACTION & PLOTTING ---
-ai_df = st.session_state.model.datacollector.get_agenttype_vars_dataframe(FirmAgent)
-human_df = st.session_state.model.datacollector.get_agenttype_vars_dataframe(HumanFirm)
+ai_df = st.session_state.sim_v2.datacollector.get_agenttype_vars_dataframe(FirmAgent)
+human_df = st.session_state.sim_v2.datacollector.get_agenttype_vars_dataframe(HumanFirm)
 firm_df = pd.concat([ai_df, human_df])
 
 if not firm_df.empty:
