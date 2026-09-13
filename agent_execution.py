@@ -26,6 +26,9 @@ def batch_consumer_choice(consumers, firm_states):
             if firm.get('ad_spend', 0) > 0:
                 ad_boost_multiplier = 1.0 + (firm['ad_spend'] / (firm['ad_spend'] + 500.0))
                 perceived_value *= ad_boost_multiplier
+
+            max_allowed_price = 120.0
+            perceived_value = min(perceived_value, max_allowed_price)
             
             subjective_bonus = random.gauss(0, 8.0) 
             surplus = (perceived_value + subjective_bonus) - (firm['price'] * sensitivity)
