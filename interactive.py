@@ -13,11 +13,9 @@ class HumanFirm(mesa.Agent):
         self.target_inn = 0.0
         self.target_diff = 0.0
         
-        # 1. HARD CASH CONSTRAINT
         self.cash = 100000.0  
         self.is_bankrupt = False
         
-        # 2. STRATEGIC LAG (3-Quarter Delay)
         self.ad_queue = [0.0, 0.0, 0.0]
         self.inn_queue = [0.0, 0.0, 0.0]
         
@@ -29,7 +27,6 @@ class HumanFirm(mesa.Agent):
         self.differentiation_cost = 0.0
 
     def step(self):
-        # Bankruptcy Check
         if self.cash <= 0:
             self.is_bankrupt = True
             return
@@ -37,14 +34,12 @@ class HumanFirm(mesa.Agent):
         self.price = self.target_price
         self.differentiation_cost = self.target_diff
         
-        # Deduct R&D and Ad spend instantly from the bank account
+        # Physically deduct the cash here
         self.cash -= (self.target_ads + self.target_inn)
         
-        # Queue the investments for future quarters
         self.ad_queue.append(self.target_ads)
         self.inn_queue.append(self.target_inn)
         
-        # Realize past investments
         self.ad_spend = self.ad_queue.pop(0)
         self.innovation_spend = self.inn_queue.pop(0)
 
@@ -53,33 +48,34 @@ class InteractiveMarketModel(mesa.Model):
     def __init__(self, num_ai_firms=4, num_consumers=2000):
         super().__init__()
         self.num_consumers = num_consumers
-        
-        # ---> EXPLICIT CLOCK TO FIX THE GRAPH FREEZE <---
         self.steps = 0 
         
-        # Compatibility handling for different Mesa versions
+        # ---> THE FIX: Direct Object References <---
+        self.firm_agents = [] 
+        
+        # Keep schedule strictly for the DataCollector's background requirements
         self.schedule = mesa.time.RandomActivation(self) if hasattr(mesa.time, 'RandomActivation') else None
         
-        # Initialize AI Firms
         strategies = ["Cost Leadership", "Differentiation", "Innovation", "Market Expansion"]
         for i in range(num_ai_firms):
             a = FirmAgent(i, self, strategies[i % len(strategies)])
+            self.firm_agents.append(a)
             if self.schedule:
                 self.schedule.add(a)
             else:
                 self.agents.add(a)
                 
-        # Initialize Human Firm
-        human = HumanFirm(num_ai_firms, self)
+        # Hardwire the human firm so app.py can grab it flawlessly
+        self.human_firm = HumanFirm(num_ai_firms, self)
+        self.firm_agents.append(self.human_firm)
+        
         if self.schedule:
-            self.schedule.add(human)
+            self.schedule.add(self.human_firm)
         else:
-            self.agents.add(human)
+            self.agents.add(self.human_firm)
             
-        # Initialize Synthetic Consumers
         self.consumers = [{'id': i, 'price_sensitivity': random.uniform(0.5, 1.5)} for i in range(num_consumers)]
         
-        # Data Collection Setup
         self.datacollector = mesa.DataCollector(
             agent_reporters={
                 "Strategy": "strategy",
@@ -90,26 +86,31 @@ class InteractiveMarketModel(mesa.Model):
         )
         
     def step(self):
-        # ---> FORCE THE CLOCK TO TICK FORWARD <---
         self.steps += 1 
         
-        firm_agents = self.schedule.agents if hasattr(self, 'schedule') and self.schedule else self.agents
+        # ---> THE FIX: Explicitly force the agents to act <---
+        for a in self.firm_agents:
+            if hasattr(a, 'step'):
+                a.step()
+                
+        # Advance Mesa's background clock safely
+        if self.schedule:
+            self.schedule.steps += 1
+            self.schedule.time += 1
         
         firm_states = [{
             'id': a.unique_id, 'price': a.price, 'strategy': a.strategy, 
             'ad_spend': getattr(a, 'ad_spend', 0.0),
             'innovation_spend': getattr(a, 'innovation_spend', 0.0),
             'differentiation_cost': getattr(a, 'differentiation_cost', 0.0)
-        } for a in firm_agents]
+        } for a in self.firm_agents]
         
-        # Process Consumer Choices
         all_choices = batch_consumer_choice(self.consumers, firm_states)
         
         from collections import Counter
         sales_counts = Counter([firm_id for cons_id, firm_id in all_choices])
         
-        # Calculate Financials & Update Bank Accounts
-        for a in firm_agents:
+        for a in self.firm_agents:
             if getattr(a, 'is_bankrupt', False):
                 a.sales = 0
                 a.revenue = 0
@@ -125,15 +126,7 @@ class InteractiveMarketModel(mesa.Model):
             
             a.profit = a.revenue - (a.sales * (base_cost + diff_cost)) - fixed_costs
             
-            # Replenish cash from gross margin sales
             if hasattr(a, 'cash'):
                 a.cash += (a.revenue - (a.sales * (base_cost + diff_cost)))
                 
-        # Advance the simulation logic for all agents
-        if hasattr(self, 'schedule') and self.schedule:
-            self.schedule.step()
-        else:
-            self.agents.shuffle_do("step")
-            
-        # Log the quarter's data for the charts
         self.datacollector.collect(self)
