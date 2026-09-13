@@ -10,27 +10,49 @@ from agent import FirmAgent
 from agent_execution import batch_consumer_choice
 
 # --- 1. DEFINE THE HUMAN-CONTROLLED AGENT ---
-class HumanFirm(FirmAgent):
-    def __init__(self, model):
-        super().__init__(model, strategy="My Company (Human)")
-        self.base_cost = 20.0
-        self.price = 50.0
+class HumanFirm(mesa.Agent):
+    def __init__(self, unique_id, model):
+        super().__init__(unique_id, model)
+        self.strategy = "My Company (Human)"
+        self.price = 40.0
+        self.target_price = 40.0
+        self.target_ads = 0.0
+        self.target_inn = 0.0
+        self.target_diff = 0.0
+        
+        # 1. HARD CASH CONSTRAINT
+        self.cash = 100000.0  
+        self.is_bankrupt = False
+        
+        # 2. STRATEGIC LAG (3-Quarter Delay)
+        self.ad_queue = [0.0, 0.0, 0.0]
+        self.inn_queue = [0.0, 0.0, 0.0]
+        
+        self.sales = 0
+        self.revenue = 0
+        self.profit = 0
         self.ad_spend = 0.0
         self.innovation_spend = 0.0
         self.differentiation_cost = 0.0
 
     def step(self):
-        # Read strategies directly from the dashboard sliders
-        self.price = self.model.human_target_price
-        self.ad_spend = self.model.human_target_ads
-        self.innovation_spend = self.model.human_target_inn
-        self.differentiation_cost = self.model.human_target_diff
+        if self.cash <= 0:
+            self.is_bankrupt = True
+            return
+            
+        self.price = self.target_price
+        self.differentiation_cost = self.target_diff
         
-        # Calculate Total Unit Cost (Base Cost + Premium Materials)
-        total_unit_cost = self.base_cost + self.differentiation_cost
+        # Deduct R&D and Ad spend from your bank account instantly
+        self.cash -= (self.target_ads + self.target_inn)
         
-        # Calculate Profit: Revenue - Variable Costs - Fixed Costs (Ads + R&D)
-        self.profit = self.revenue - (total_unit_cost * self.sales) - self.ad_spend - self.innovation_spend
+        # Queue the investments for the future
+        self.ad_queue.append(self.target_ads)
+        self.inn_queue.append(self.target_inn)
+        
+        # Realize the investments you made 3 quarters ago
+        self.ad_spend = self.ad_queue.pop(0)
+        self.innovation_spend = self.inn_queue.pop(0)
 
 
 # --- 2. THE MARKET MODEL ---
@@ -78,14 +100,25 @@ class InteractiveMarketModel(mesa.Model):
         
         # 3. Calculate Sales, Revenue, and Profit
         for a in firm_agents:
+            if getattr(a, 'is_bankrupt', False):
+                a.sales = 0
+                a.revenue = 0
+                a.profit = 0
+                continue
+                
             a.sales = sales_counts.get(a.unique_id, 0)
             a.revenue = a.sales * a.price
             
-            # Explicitly calculate profit so the right-side graph populates
             base_cost = 20.0 
             diff_cost = getattr(a, 'differentiation_cost', 0.0)
-            fixed_costs = getattr(a, 'ad_spend', 0.0) + getattr(a, 'innovation_spend', 0.0)
+            fixed_costs = getattr(a, 'target_ads', getattr(a, 'ad_spend', 0.0)) + getattr(a, 'target_inn', getattr(a, 'innovation_spend', 0.0))
+            
+            # Update the graph metric
             a.profit = a.revenue - (a.sales * (base_cost + diff_cost)) - fixed_costs
+            
+            # Deposit the gross margin into the Human firm's bank account
+            if hasattr(a, 'cash'):
+                a.cash += (a.revenue - (a.sales * (base_cost + diff_cost)))
                 
         # 4. Advance the Simulation Clock (Crucial for graphs!)
         if hasattr(self, 'schedule'):
