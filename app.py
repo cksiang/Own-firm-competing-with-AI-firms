@@ -1,19 +1,8 @@
-import sys
-
-# --- 0. FORCE MODULE RELOAD (THE ONCE AND FOR ALL FIX) ---
-# This physically destroys the ghost cache in Streamlit's background memory
-# forcing it to read the new versions of your files from disk.
-modules_to_clear = ['agent', 'interactive', 'agent_execution']
-for mod in modules_to_clear:
-    if mod in sys.modules:
-        del sys.modules[mod]
-
 import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
 import time
 
-# Now it is guaranteed to import the fresh files
 from interactive import InteractiveMarketModel, HumanFirm
 from agent import FirmAgent
 from agent_execution import batch_consumer_choice
@@ -23,15 +12,15 @@ st.set_page_config(page_title="AI Market Simulator", layout="wide")
 st.title("Human vs AI: Live Strategy Simulation")
 
 # --- 2. NATIVE STATE INITIALIZATION ---
-if 'sim_v6' not in st.session_state:
-    st.session_state.sim_v6 = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
-    st.session_state.sim_v6.step()
+if 'sim_v7' not in st.session_state:
+    st.session_state.sim_v7 = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
+    st.session_state.sim_v7.step()
     st.session_state.company_cash = 100000.0  
 
 # --- 3. DASHBOARD UI (SIDEBAR) ---
 st.sidebar.header("My Company Strategy")
 
-human_firm = st.session_state.sim_v6.human_firm
+human_firm = st.session_state.sim_v7.human_firm
 
 price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
 ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
@@ -53,7 +42,7 @@ with col_auto:
 
 if step_pressed or auto_run:
     with st.spinner("Processing market quarter..."):
-        st.session_state.sim_v6.step()
+        st.session_state.sim_v7.step()
         
         human_firm.price = price_val
         human_firm.differentiation_cost = diff_val
@@ -76,7 +65,7 @@ if st.session_state.company_cash <= 0:
 # --- 5. SCOREBOARD & GRAPHS ---
 st.subheader("Live Market Scoreboard (Current Quarter)")
 
-active_agents = st.session_state.sim_v6.schedule.agents if hasattr(st.session_state.sim_v6, 'schedule') and st.session_state.sim_v6.schedule else st.session_state.sim_v6.agents
+active_agents = st.session_state.sim_v7.schedule.agents if hasattr(st.session_state.sim_v7, 'schedule') and st.session_state.sim_v7.schedule else st.session_state.sim_v7.agents
 total_sales = sum([getattr(a, 'sales', 0) for a in active_agents])
 
 scoreboard_data = []
@@ -95,8 +84,8 @@ for a in active_agents:
 
 st.table(pd.DataFrame(scoreboard_data).set_index("Firm"))
 
-ai_df = st.session_state.sim_v6.datacollector.get_agenttype_vars_dataframe(FirmAgent)
-human_df = st.session_state.sim_v6.datacollector.get_agenttype_vars_dataframe(HumanFirm)
+ai_df = st.session_state.sim_v7.datacollector.get_agenttype_vars_dataframe(FirmAgent)
+human_df = st.session_state.sim_v7.datacollector.get_agenttype_vars_dataframe(HumanFirm)
 firm_df = pd.concat([ai_df, human_df])
 
 if not firm_df.empty:
@@ -128,7 +117,7 @@ if not firm_df.empty:
 st.markdown("---")
 st.subheader("📊 Consumer Elasticity Intelligence")
 
-consumers = getattr(st.session_state.sim_v6, 'consumers', [])
+consumers = getattr(st.session_state.sim_v7, 'consumers', [])
 if consumers:
     total_cons = len(consumers)
     
