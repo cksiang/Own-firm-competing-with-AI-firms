@@ -82,16 +82,15 @@ class FirmAgent(mesa.Agent):
 
                 
         elif self.strategy == "Innovation":
-            # Goal: Leverage massive R&D to corner the loyalists, reacting to market chaos.
+            # Goal: Leverage massive R&D, but don't spend into bankruptcy
             if my_market_share < 0.20:
-                # Panic: Out-innovate everyone and improve physical specs
                 self.innovation_spend += 150.0
                 self.differentiation_cost = min(15.0, self.differentiation_cost + 0.5)
-                # Drop price closer to the market average to steal volume back
                 self.price = max(25.0, min(self.price - 1.0, avg_comp_price + 2.0))
             else:
-                # Dominating: Maintain R&D lead and raise prices aggressively
-                self.innovation_spend += 50.0
+                # Cap R&D spend at 30% of previous revenue to ensure profitability
+                max_safe_rd = self.revenue * 0.30 if self.revenue > 0 else 500.0
+                self.innovation_spend = min(self.innovation_spend + 50.0, max_safe_rd)
                 self.price += 1.0
                 
                 
