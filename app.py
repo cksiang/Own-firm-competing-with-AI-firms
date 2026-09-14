@@ -12,9 +12,9 @@ st.set_page_config(page_title="AI Market Simulator", layout="wide")
 st.title("Human vs AI: Live Strategy Simulation")
 
 # --- 2. NATIVE STATE INITIALIZATION ---
-if 'sim_v8' not in st.session_state:
-    st.session_state.sim_v8 = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
-    st.session_state.sim_v8.step()
+if 'sim_v9' not in st.session_state:
+    st.session_state.sim_v9 = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
+    st.session_state.sim_v9.step()
     st.session_state.company_cash = 100000.0  
 
 # --- 3. DASHBOARD UI (SIDEBAR) ---
