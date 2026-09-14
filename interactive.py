@@ -78,7 +78,16 @@ class InteractiveMarketModel(mesa.Model):
         strategies = ["Cost Leadership", "Differentiation", "Innovation", "Market Expansion"]
         for i in range(num_ai_firms):
             strat = strategies[i % len(strategies)]
-            a = FirmAgent(i, self, strat)
+            
+            # THE FIX: Explicitly handle the 2 vs 3 positional argument limit
+            try:
+                # Try Mesa 2.x standard format
+                a = FirmAgent(i, self, strategy=strat)
+            except TypeError:
+                # If it rejects 4 arguments, use the Mesa 3.0+ format (model, strategy)
+                a = FirmAgent(self, strategy=strat)
+                a.unique_id = i
+                
             self.firm_agents.append(a)
             
             if self.schedule:
