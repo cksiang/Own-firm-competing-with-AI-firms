@@ -5,7 +5,12 @@ from agent_execution import batch_consumer_choice
 
 class HumanFirm(mesa.Agent):
     def __init__(self, unique_id, model):
-        super().__init__(unique_id, model)
+        try:
+            super().__init__(unique_id, model)
+        except TypeError:
+            super().__init__(model)
+            
+        self.unique_id = unique_id
         self.strategy = "My Company (Human)"
         self.price = 40.0
         self.target_price = 40.0
@@ -34,7 +39,6 @@ class HumanFirm(mesa.Agent):
         self.price = self.target_price
         self.differentiation_cost = self.target_diff
         
-        # Physically deduct the cash here
         self.cash -= (self.target_ads + self.target_inn)
         
         self.ad_queue.append(self.target_ads)
@@ -46,33 +50,54 @@ class HumanFirm(mesa.Agent):
 
 class InteractiveMarketModel(mesa.Model):
     def __init__(self, num_ai_firms=4, num_consumers=2000):
-        super().__init__()
+        try:
+            super().__init__()
+        except Exception:
+            pass
+            
         self.num_consumers = num_consumers
         self.steps = 0 
-        
-        # ---> THE FIX: Direct Object References <---
         self.firm_agents = [] 
         
-        # Keep schedule strictly for the DataCollector's background requirements
-        self.schedule = mesa.time.RandomActivation(self) if hasattr(mesa.time, 'RandomActivation') else None
+        self.schedule = mesa.time.RandomActivation(self) if hasattr(mesa, 'time') and hasattr(mesa.time, 'RandomActivation') else None
         
         strategies = ["Cost Leadership", "Differentiation", "Innovation", "Market Expansion"]
         for i in range(num_ai_firms):
-            a = FirmAgent(i, self, strategies[i % len(strategies)])
+            strat = strategies[i % len(strategies)]
+            
+            # Polymorphic instantiation supporting Mesa 2.x and 3.x signatures
+            try:
+                a = FirmAgent(i, self, strat)
+            except TypeError:
+                try:
+                    a = FirmAgent(self, strat)
+                except TypeError:
+                    a = FirmAgent(unique_id=i, model=self, strategy=strat)
+            
+            a.unique_id = i
+            a.strategy = strat
             self.firm_agents.append(a)
+            
             if self.schedule:
                 self.schedule.add(a)
-            else:
-                self.agents.add(a)
+            elif hasattr(self, 'agents') and hasattr(self.agents, 'add'):
+                try:
+                    self.agents.add(a)
+                except Exception:
+                    pass
                 
-        # Hardwire the human firm so app.py can grab it flawlessly
-        self.human_firm = HumanFirm(num_ai_firms, self)
-        self.firm_agents.append(self.human_firm)
+        # Hardwire the Human Firm
+        human = HumanFirm(num_ai_firms, self)
+        self.human_firm = human
+        self.firm_agents.append(human)
         
         if self.schedule:
-            self.schedule.add(self.human_firm)
-        else:
-            self.agents.add(self.human_firm)
+            self.schedule.add(human)
+        elif hasattr(self, 'agents') and hasattr(self.agents, 'add'):
+            try:
+                self.agents.add(human)
+            except Exception:
+                pass
             
         self.consumers = [{'id': i, 'price_sensitivity': random.uniform(0.5, 1.5)} for i in range(num_consumers)]
         
@@ -88,18 +113,20 @@ class InteractiveMarketModel(mesa.Model):
     def step(self):
         self.steps += 1 
         
-        # ---> THE FIX: Explicitly force the agents to act <---
         for a in self.firm_agents:
             if hasattr(a, 'step'):
                 a.step()
                 
-        # Advance Mesa's background clock safely
         if self.schedule:
-            self.schedule.steps += 1
-            self.schedule.time += 1
+            if hasattr(self.schedule, 'steps'):
+                self.schedule.steps += 1
+            if hasattr(self.schedule, 'time'):
+                self.schedule.time += 1
         
         firm_states = [{
-            'id': a.unique_id, 'price': a.price, 'strategy': a.strategy, 
+            'id': a.unique_id, 
+            'price': getattr(a, 'price', 40.0), 
+            'strategy': getattr(a, 'strategy', ''), 
             'ad_spend': getattr(a, 'ad_spend', 0.0),
             'innovation_spend': getattr(a, 'innovation_spend', 0.0),
             'differentiation_cost': getattr(a, 'differentiation_cost', 0.0)
@@ -118,7 +145,7 @@ class InteractiveMarketModel(mesa.Model):
                 continue
                 
             a.sales = sales_counts.get(a.unique_id, 0)
-            a.revenue = a.sales * a.price
+            a.revenue = a.sales * getattr(a, 'price', 40.0)
             
             base_cost = 20.0 
             diff_cost = getattr(a, 'differentiation_cost', 0.0)
