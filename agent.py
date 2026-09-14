@@ -2,7 +2,6 @@ import mesa
 
 class FirmAgent(mesa.Agent):
     def __init__(self, *args, **kwargs):
-        # Keeps your stable initialization intact
         if len(args) == 1:
             super().__init__(args[0])
         elif len(args) >= 2:
@@ -25,7 +24,7 @@ class FirmAgent(mesa.Agent):
         self.innovation_spend = 0.0
         self.differentiation_cost = 0.0
         
-        # Starting Positions
+        # Base Starting Positions
         if self.strategy == "Cost Leadership":
             self.price = 24.0
         elif self.strategy == "Differentiation":
@@ -39,50 +38,71 @@ class FirmAgent(mesa.Agent):
             self.ad_spend = 500.0
 
     def step(self):
-        # INTELLIGENT AGGRESSIVE LOGIC
-        # Total market is 2,000 consumers. Fair share is 400 per firm.
+        # --- 1. ECOSYSTEM INTELLIGENCE (THE RADAR) ---
+        all_firms = getattr(self.model, 'firm_agents', [])
+        if not all_firms:
+            return 
+            
+        total_market_sales = sum(getattr(a, 'sales', 0) for a in all_firms)
+        # Default to a 20% assumed share on Turn 1 before sales happen
+        my_market_share = (self.sales / total_market_sales) if total_market_sales > 0 else 0.20 
+        
+        # Spy on competitors
+        competitors = [a for a in all_firms if getattr(a, 'unique_id', None) != getattr(self, 'unique_id', None)]
+        comp_prices = [getattr(a, 'price', 40.0) for a in competitors]
+        min_comp_price = min(comp_prices) if comp_prices else 40.0
+        avg_comp_price = sum(comp_prices) / len(comp_prices) if comp_prices else 40.0
+        
+        comp_ads = [getattr(a, 'target_ads', getattr(a, 'ad_spend', 0.0)) for a in competitors]
+        max_comp_ads = max(comp_ads) if comp_ads else 0.0
+
+
+        # --- 2. SUPER-INTELLIGENT REACTIVE STRATEGIES ---
         
         if self.strategy == "Cost Leadership":
-            # Goal: Maximize volume at razor-thin margins
-            if self.sales < 500:  
-                # Losing share? Undercut aggressively, down to 50 cents profit.
-                self.price = max(20.5, self.price - 0.50) 
-            elif self.sales > 800: 
-                # Monopolizing? Slowly raise price to take profits.
-                self.price += 0.25 
+            # Goal: ALWAYS be the cheapest option on the board.
+            if my_market_share < 0.25 or self.price >= min_comp_price:
+                # Undercut the absolute lowest competitor in the market
+                self.price = max(20.50, min_comp_price - 0.50)
+            elif my_market_share > 0.35 and self.price < (min_comp_price - 1.0):
+                # If dominating, safely raise prices to take profits, remaining just slightly cheaper
+                self.price = min_comp_price - 0.25
+
                 
         elif self.strategy == "Differentiation":
-            # Goal: Premium quality, high margins
-            if self.sales < 250: 
-                # Losing share? Improve quality up to the $20 cap. If capped, drop the premium.
-                if self.differentiation_cost < 20.0:
-                    self.differentiation_cost += 1.0
-                else:
-                    self.price = max(35.0, self.price - 1.0)
-            else: 
-                # Selling well? Keep pushing the price up.
+            # Goal: Protect the premium brand image and quality gap.
+            if my_market_share < 0.15:
+                # If losing share, actively boost physical quality (up to +$25)
+                self.differentiation_cost = min(25.0, self.differentiation_cost + 1.0)
+                # Ensure price justifies the quality, but peg it to the market average to remain somewhat competitive
+                self.price = max(avg_comp_price + 5.0, 20.0 + self.differentiation_cost + 10.0)
+            else:
+                # If maintaining healthy premium share, slowly raise prices to test elasticity
                 self.price += 0.50
+
                 
         elif self.strategy == "Innovation":
-            # Goal: Win the inelastic market through compounding R&D and cutting-edge features
-            if self.sales < 300: 
-                # Losing loyalists? Boost R&D, improve physical quality, and slightly drop price.
-                self.innovation_spend += 100.0 
-                # R&D leads to better physical parts, increasing unit cost up to a +$15 cap
+            # Goal: Leverage massive R&D to corner the loyalists, reacting to market chaos.
+            if my_market_share < 0.20:
+                # Panic: Out-innovate everyone and improve physical specs
+                self.innovation_spend += 150.0
                 self.differentiation_cost = min(15.0, self.differentiation_cost + 0.5)
-                self.price = max(28.0, self.price - 0.50)
+                # Drop price closer to the market average to steal volume back
+                self.price = max(25.0, min(self.price - 1.0, avg_comp_price + 2.0))
             else:
-                # Dominating? Exploit brand loyalty with price hikes, but keep R&D ticking to stay ahead.
+                # Dominating: Maintain R&D lead and raise prices aggressively
                 self.innovation_spend += 50.0
                 self.price += 1.0
-            
+                
+                
         elif self.strategy == "Market Expansion":
-            # Goal: Buy market share with massive ad budgets
-            if self.sales < 600: 
-                # Not enough volume? Flood the zone with ads and slash price.
-                self.ad_spend += 200.0 
-                self.price = max(21.0, self.price - 0.50)
-            else:
-                # Captured the market? Pull back ad spend to save cash and slowly raise price.
-                self.ad_spend = max(500.0, self.ad_spend - 50.0) 
-                self.price += 0.25
+            # Goal: Win the marketing war by outspending everyone else in the ecosystem.
+            if my_market_share < 0.25:
+                # Must out-advertise the highest spender in the market
+                self.ad_spend = max_comp_ads + 200.0
+                # Peg price slightly below the market average to maximize ad conversion
+                self.price = max(21.0, avg_comp_price - 1.0)
+            elif my_market_share > 0.40:
+                # Captured a massive monopoly? Slash ad spend to save cash and slowly raise price
+                self.ad_spend = max(200.0, self.ad_spend - 100.0)
+                self.price += 0.50
