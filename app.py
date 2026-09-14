@@ -12,15 +12,15 @@ st.set_page_config(page_title="AI Market Simulator", layout="wide")
 st.title("Human vs AI: Live Strategy Simulation")
 
 # --- 2. NATIVE STATE INITIALIZATION ---
-if 'sim_v3' not in st.session_state:
-    st.session_state.sim_v3 = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
-    st.session_state.sim_v3.step()
+if 'sim_v4' not in st.session_state:
+    st.session_state.sim_v4 = InteractiveMarketModel(num_ai_firms=4, num_consumers=2000) 
+    st.session_state.sim_v4.step()
     st.session_state.company_cash = 100000.0  # Native bank account
 
 # --- 3. DASHBOARD UI (SIDEBAR) ---
 st.sidebar.header("My Company Strategy")
 
-human_firm = st.session_state.sim_v3.human_firm
+human_firm = st.session_state.sim_v4.human_firm
 
 price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
 ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
@@ -44,7 +44,7 @@ with col_auto:
 if step_pressed or auto_run:
     with st.spinner("Processing market quarter..."):
         # 1. Advance the market simulation
-        st.session_state.sim_v3.step()
+        st.session_state.sim_v4.step()
         
         # 2. OVERWRITE BACKEND RESET: Force live slider values post-step
         human_firm.price = price_val
@@ -72,7 +72,7 @@ if st.session_state.company_cash <= 0:
 # --- 5. SCOREBOARD & GRAPHS ---
 st.subheader("Live Market Scoreboard (Current Quarter)")
 
-active_agents = st.session_state.sim_v3.schedule.agents if hasattr(st.session_state.sim_v3, 'schedule') and st.session_state.sim_v3.schedule else st.session_state.sim_v3.agents
+active_agents = st.session_state.sim_v4.schedule.agents if hasattr(st.session_state.sim_v4, 'schedule') and st.session_state.sim_v4.schedule else st.session_state.sim_v4.agents
 total_sales = sum([getattr(a, 'sales', 0) for a in active_agents])
 
 scoreboard_data = []
@@ -92,8 +92,8 @@ for a in active_agents:
 st.table(pd.DataFrame(scoreboard_data).set_index("Firm"))
 
 # Extract graph data
-ai_df = st.session_state.sim_v3.datacollector.get_agenttype_vars_dataframe(FirmAgent)
-human_df = st.session_state.sim_v3.datacollector.get_agenttype_vars_dataframe(HumanFirm)
+ai_df = st.session_state.sim_v4.datacollector.get_agenttype_vars_dataframe(FirmAgent)
+human_df = st.session_state.sim_v4.datacollector.get_agenttype_vars_dataframe(HumanFirm)
 firm_df = pd.concat([ai_df, human_df])
 
 if not firm_df.empty:
@@ -125,7 +125,7 @@ if not firm_df.empty:
 st.markdown("---")
 st.subheader("📊 Consumer Elasticity Intelligence")
 
-consumers = getattr(st.session_state.sim_v3, 'consumers', [])
+consumers = getattr(st.session_state.sim_v4, 'consumers', [])
 if consumers:
     total_cons = len(consumers)
     
