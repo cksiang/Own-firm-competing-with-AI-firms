@@ -98,7 +98,7 @@ class InteractiveMarketModel(mesa.Model):
                 except Exception:
                     pass
                 
-        human = HumanFirm(num_ai_firms, self)
+        human = HumanFirm(999, self)
         self.human_firm = human
         self.firm_agents.append(human)
         
