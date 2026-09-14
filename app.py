@@ -20,7 +20,8 @@ if 'sim_v9' not in st.session_state:
 # --- 3. DASHBOARD UI (SIDEBAR) ---
 st.sidebar.header("My Company Strategy")
 
-human_firm = st.session_state.sim_v8.human_firm
+# Fixed: Now properly references sim_v9
+human_firm = st.session_state.sim_v9.human_firm
 
 price_val = st.sidebar.slider("Price ($)", 10.0, 100.0, 40.0, 1.0)
 ads_val = st.sidebar.slider("Ad Spend ($/turn)", 0.0, 5000.0, 0.0, 100.0)
@@ -42,7 +43,7 @@ with col_auto:
 
 if step_pressed or auto_run:
     with st.spinner("Processing market quarter..."):
-        st.session_state.sim_v8.step()
+        st.session_state.sim_v9.step()
         
         human_firm.price = price_val
         human_firm.differentiation_cost = diff_val
@@ -65,7 +66,7 @@ if st.session_state.company_cash <= 0:
 # --- 5. SCOREBOARD & GRAPHS ---
 st.subheader("Live Market Scoreboard (Current Quarter)")
 
-active_agents = st.session_state.sim_v8.schedule.agents if hasattr(st.session_state.sim_v8, 'schedule') and st.session_state.sim_v8.schedule else st.session_state.sim_v8.agents
+active_agents = st.session_state.sim_v9.schedule.agents if hasattr(st.session_state.sim_v9, 'schedule') and st.session_state.sim_v9.schedule else st.session_state.sim_v9.agents
 total_sales = sum([getattr(a, 'sales', 0) for a in active_agents])
 
 scoreboard_data = []
@@ -84,8 +85,7 @@ for a in active_agents:
 
 st.table(pd.DataFrame(scoreboard_data).set_index("Firm"))
 
-# THE FIX: Universal Data Extraction (Ignores Class Types!)
-firm_df = st.session_state.sim_v8.datacollector.get_agent_vars_dataframe()
+firm_df = st.session_state.sim_v9.datacollector.get_agent_vars_dataframe()
 
 if not firm_df.empty:
     df_reset = firm_df.reset_index()
@@ -116,7 +116,7 @@ if not firm_df.empty:
 st.markdown("---")
 st.subheader("📊 Consumer Elasticity Intelligence")
 
-consumers = getattr(st.session_state.sim_v8, 'consumers', [])
+consumers = getattr(st.session_state.sim_v9, 'consumers', [])
 if consumers:
     total_cons = len(consumers)
     
