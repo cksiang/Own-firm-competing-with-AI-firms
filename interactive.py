@@ -4,13 +4,27 @@ from agent import FirmAgent
 from agent_execution import batch_consumer_choice
 
 class HumanFirm(mesa.Agent):
-    def __init__(self, unique_id, model):
+    def __init__(self, *args, **kwargs):
+        unique_id = kwargs.get('unique_id', None)
+        model = kwargs.get('model', None)
+
+        if args:
+            if len(args) >= 2:
+                unique_id, model = args[0], args[1]
+            elif len(args) == 1:
+                if isinstance(args[0], mesa.Model):
+                    model = args[0]
+                else:
+                    unique_id = args[0]
+
         try:
             super().__init__(unique_id, model)
         except TypeError:
             super().__init__(model)
             
-        self.unique_id = unique_id
+        if unique_id is not None:
+            self.unique_id = unique_id
+
         self.strategy = "My Company (Human)"
         self.price = 40.0
         self.target_price = 40.0
@@ -64,18 +78,7 @@ class InteractiveMarketModel(mesa.Model):
         strategies = ["Cost Leadership", "Differentiation", "Innovation", "Market Expansion"]
         for i in range(num_ai_firms):
             strat = strategies[i % len(strategies)]
-            
-            # Polymorphic instantiation supporting Mesa 2.x and 3.x signatures
-            try:
-                a = FirmAgent(i, self, strat)
-            except TypeError:
-                try:
-                    a = FirmAgent(self, strat)
-                except TypeError:
-                    a = FirmAgent(unique_id=i, model=self, strategy=strat)
-            
-            a.unique_id = i
-            a.strategy = strat
+            a = FirmAgent(i, self, strat)
             self.firm_agents.append(a)
             
             if self.schedule:
@@ -86,7 +89,6 @@ class InteractiveMarketModel(mesa.Model):
                 except Exception:
                     pass
                 
-        # Hardwire the Human Firm
         human = HumanFirm(num_ai_firms, self)
         self.human_firm = human
         self.firm_agents.append(human)
