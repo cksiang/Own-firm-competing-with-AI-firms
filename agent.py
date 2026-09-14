@@ -38,18 +38,31 @@ class FirmAgent(mesa.Agent):
             self.ad_spend = 500.0
 
     def step(self):
-        # RESTORED: Aggressive AI Competition Logic
+        # ADVANCED REACTIVE AI LOGIC
+        # The AI now checks its previous quarter's sales to make decisions.
+        # Total market is 2,000 consumers.
+        
         if self.strategy == "Cost Leadership":
-            # Ruthlessly cut prices over time to steal volume
-            self.price = max(21.0, self.price - 0.5)
+            if self.sales < 400:  # Losing market share? Panic and drop price.
+                self.price = max(20.5, self.price - 0.5)
+            elif self.sales > 800: # Monopoly? Raise prices to gouge consumers.
+                self.price += 0.5
+                
         elif self.strategy == "Differentiation":
-            # Continuously improve quality to justify premium pricing
-            self.differentiation_cost = min(20.0, self.differentiation_cost + 1.0)
-            self.price = 20.0 + self.differentiation_cost + 15.0 
+            if self.sales < 200: # Too expensive for the market? Drop premium price slightly.
+                self.price = max(30.0, self.price - 1.0)
+            else: # Selling well? Keep increasing quality and price.
+                self.differentiation_cost = min(25.0, self.differentiation_cost + 0.5)
+                self.price = 20.0 + self.differentiation_cost + 15.0 
+                
         elif self.strategy == "Innovation":
-            # Compound R&D spending to capture the inelastic market
-            self.innovation_spend += 100.0
+            if self.sales < 200: # Losing volume? Make the product more accessible.
+                self.price = max(25.0, self.price - 0.5)
+            self.innovation_spend += 50.0 # Always keep R&D ticking up
+            
         elif self.strategy == "Market Expansion":
-            # Flood the market with ads while slowly dropping price
-            self.ad_spend += 100.0
-            self.price = max(22.0, self.price - 0.25)
+            if self.sales < 500: # Not enough reach? Buy more ads and cut price.
+                self.ad_spend += 100.0
+                self.price = max(21.0, self.price - 0.5)
+            else: # Captured the market? Stop dropping price.
+                self.price += 0.5
