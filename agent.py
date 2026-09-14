@@ -2,6 +2,7 @@ import mesa
 
 class FirmAgent(mesa.Agent):
     def __init__(self, *args, **kwargs):
+        # Keeps your stable initialization intact
         if len(args) == 1:
             super().__init__(args[0])
         elif len(args) >= 2:
@@ -24,7 +25,7 @@ class FirmAgent(mesa.Agent):
         self.innovation_spend = 0.0
         self.differentiation_cost = 0.0
         
-        # Base Starting Positions
+        # Starting Positions
         if self.strategy == "Cost Leadership":
             self.price = 24.0
         elif self.strategy == "Differentiation":
@@ -38,31 +39,47 @@ class FirmAgent(mesa.Agent):
             self.ad_spend = 500.0
 
     def step(self):
-        # ADVANCED REACTIVE AI LOGIC
-        # The AI now checks its previous quarter's sales to make decisions.
-        # Total market is 2,000 consumers.
+        # INTELLIGENT AGGRESSIVE LOGIC
+        # Total market is 2,000 consumers. Fair share is 400 per firm.
         
         if self.strategy == "Cost Leadership":
-            if self.sales < 400:  # Losing market share? Panic and drop price.
-                self.price = max(20.5, self.price - 0.5)
-            elif self.sales > 800: # Monopoly? Raise prices to gouge consumers.
-                self.price += 0.5
+            # Goal: Maximize volume at razor-thin margins
+            if self.sales < 500:  
+                # Losing share? Undercut aggressively, down to 50 cents profit.
+                self.price = max(20.5, self.price - 0.50) 
+            elif self.sales > 800: 
+                # Monopolizing? Slowly raise price to take profits.
+                self.price += 0.25 
                 
         elif self.strategy == "Differentiation":
-            if self.sales < 200: # Too expensive for the market? Drop premium price slightly.
-                self.price = max(30.0, self.price - 1.0)
-            else: # Selling well? Keep increasing quality and price.
-                self.differentiation_cost = min(25.0, self.differentiation_cost + 0.5)
-                self.price = 20.0 + self.differentiation_cost + 15.0 
+            # Goal: Premium quality, high margins
+            if self.sales < 250: 
+                # Losing share? Improve quality up to the $20 cap. If capped, drop the premium.
+                if self.differentiation_cost < 20.0:
+                    self.differentiation_cost += 1.0
+                else:
+                    self.price = max(35.0, self.price - 1.0)
+            else: 
+                # Selling well? Keep pushing the price up.
+                self.price += 0.50
                 
         elif self.strategy == "Innovation":
-            if self.sales < 200: # Losing volume? Make the product more accessible.
-                self.price = max(25.0, self.price - 0.5)
-            self.innovation_spend += 50.0 # Always keep R&D ticking up
+            # Goal: Win the inelastic market through compounding R&D
+            if self.sales < 300: 
+                # Losing loyalists? Aggressively out-research competitors and slight price drop.
+                self.innovation_spend += 150.0 
+                self.price = max(25.0, self.price - 0.50)
+            else:
+                # Dominating? Exploit brand loyalty with price hikes.
+                self.price += 0.50 
             
         elif self.strategy == "Market Expansion":
-            if self.sales < 500: # Not enough reach? Buy more ads and cut price.
-                self.ad_spend += 100.0
-                self.price = max(21.0, self.price - 0.5)
-            else: # Captured the market? Stop dropping price.
-                self.price += 0.5
+            # Goal: Buy market share with massive ad budgets
+            if self.sales < 600: 
+                # Not enough volume? Flood the zone with ads and slash price.
+                self.ad_spend += 200.0 
+                self.price = max(21.0, self.price - 0.50)
+            else:
+                # Captured the market? Pull back ad spend to save cash and slowly raise price.
+                self.ad_spend = max(500.0, self.ad_spend - 50.0) 
+                self.price += 0.25
